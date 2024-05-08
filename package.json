@@ -1,5 +1,5 @@
 {
-  "private": true,
+  "private": false,
   "displayName": "Air Control Base Midea AC Plugin",
   "name": "homebridge-aircontrolbase",
   "version": "0.0.1",
@@ -7,10 +7,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/USERNAME/GITHUB_PROJECT_NAME.git"
-  },
-  "bugs": {
-    "url": "https://github.com/USERNAME/GITHUB_PROJECT_NAME/issues"
+    "url": "https://github.com/enudler/homebridge-aircontrolbase.git"
   },
   "engines": {
     "node": "^18.17.0 || ^20.9.0",
