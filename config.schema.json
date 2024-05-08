@@ -1,0 +1,22 @@
+{
+  "pluginAlias": "Midea",
+  "pluginType": "platform",
+  "singular": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "email": {
+        "title": "email",
+        "type": "string",
+        "required": true,
+        "default": "email used in aircontrolbase"
+      },
+      "password": {
+        "title": "password",
+        "type": "string",
+        "required": true,
+        "default": "password used in aircontrolbase"
+      }
+    }
+  }
+}
