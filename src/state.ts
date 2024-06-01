@@ -1,19 +1,20 @@
 import {AirControlBaseApi} from './airControlBaseApi';
-import {Logger} from 'homebridge';
+import {HAPStatus, HapStatusError, Logger} from 'homebridge';
+import {Device, mapWindFromHomeKitToApi} from './device';
 
 
 export class State {
-  private devices = [];
+  private devices: Device[] = [];
   private readonly baseUrl = 'https://www.aircontrolbase.com';
   private readonly detailsPath = '/web/userGroup/getDetails';
   private readonly controlPath = '/web/device/control';
 
-  constructor(readonly log: Logger, private airControlBaseApi: AirControlBaseApi) {
+  constructor(readonly log: Logger, private readonly airControlBaseApi: AirControlBaseApi, private readonly refreshDevicesEachMs: number) {
   }
 
   public async init() {
     await this.refreshDevices();
-    setInterval(() => this.refreshDevices(), 60000);
+    setInterval(() => this.refreshDevices(), this.refreshDevicesEachMs);
   }
 
   private async refreshDevices() {
@@ -23,29 +24,40 @@ export class State {
     }
   }
 
-  public getDevice(id) {
-    // @ts-ignore
+  public getDevice(id) : Device {
     const device = this.devices.find(device => device.id === id);
+    if (device === undefined) {
+      this.log.error('Device not found with id ' + id);
+      // @ts-ignore
+      throw new HapStatusError(HAPStatus.RESOURCE_DOES_NOT_EXIST);
+    }
     return device;
   }
 
-  public getDevices() {
+  public getDevices(): Device[] {
     return this.devices;
   }
 
   async setPower(id, value) {
     const power = value ? 'y' : 'n';
     const deviceData = this.getDevice(id);
-    // @ts-ignore
     deviceData.power = power;
     await this.airControlBaseApi.controlDevice(this.extractRelevantDeviceDataForApi(deviceData), {
       power,
     });
   }
 
+  async setRotationSpeed(id, value) {
+    const wind = mapWindFromHomeKitToApi(value);
+    const deviceData = this.getDevice(id);
+    deviceData.wind = wind;
+    await this.airControlBaseApi.controlDevice(this.extractRelevantDeviceDataForApi(deviceData), {
+      wind,
+    });
+  }
+
   async setTemp(id, value) {
     const deviceData = this.getDevice(id);
-    // @ts-ignore
     deviceData.setTemp = value;
     await this.airControlBaseApi.controlDevice(this.extractRelevantDeviceDataForApi(deviceData), {
       setTemp: value,
@@ -54,7 +66,6 @@ export class State {
 
   async setMode(id, value) {
     const deviceData = this.getDevice(id);
-    // @ts-ignore
     deviceData.mode = value;
     await this.airControlBaseApi.controlDevice(this.extractRelevantDeviceDataForApi(deviceData), {
       mode: value,

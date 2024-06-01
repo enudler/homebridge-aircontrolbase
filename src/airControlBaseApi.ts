@@ -1,6 +1,8 @@
 import { Logger} from 'homebridge';
-const qs = require('qs');
-const axios = require('axios');
+import { Device } from './device';
+
+import { stringify } from 'qs';
+import axios from 'axios';
 
 export class AirControlBaseApi {
   private devices = [];
@@ -13,14 +15,18 @@ export class AirControlBaseApi {
   private sessionId: string = '';
   private lastUpdateTime: number = 0;
 
-  constructor(readonly log: Logger, readonly email: string, readonly password: string) {
+  constructor(readonly log: Logger, readonly email: string,
+              readonly password: string,
+              readonly avoidRefreshStatusOnUpdateInMs: number) {
   }
 
   public async login() {
     const loginResponse = await this.executeAPI(this.baseUrl + this.loginPath, undefined, undefined, {
       account: this.email,
       password: this.password,
+      avoidRefreshStatusOnUpdateInMs: this.avoidRefreshStatusOnUpdateInMs
     }, false);
+
     this.log.info('logged in to aircontrolbase');
     this.userId = loginResponse.data.result.id;
     this.sessionId = loginResponse.headers['set-cookie'][0];
@@ -35,8 +41,9 @@ export class AirControlBaseApi {
   }
 
   public async refreshDevices() {
-    //If any chance was done from homekit in the last 15 seconds, don't refresh.
-    if (this.lastUpdateTime > 0 && Date.now() - this.lastUpdateTime < 15000) {
+    //If any chance was done from homekit in the last X seconds, don't refresh,
+    // as it might not yet been applied bye the device on the server.
+    if (this.lastUpdateTime > 0 && Date.now() - this.lastUpdateTime < this.avoidRefreshStatusOnUpdateInMs) {
       return;
     }
     const devicesResponse = await this.executeAPI(this.baseUrl + this.detailsPath, this.sessionId, this.userId, {});
@@ -47,7 +54,7 @@ export class AirControlBaseApi {
         allDevices = allDevices.concat(area.data);
       });
     }
-    return allDevices;
+     return allDevices;
   }
 
   public async executeAPI(url, cookie, userId, data, shouldRetryOnSessionExpired = true) {
@@ -59,11 +66,11 @@ export class AirControlBaseApi {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Cookie': cookie ? cookie : '',
       }, method: 'post',
-      data: userId ? qs.stringify({
+      data: userId ? stringify({
         userId: userId,
         control: data.control ? JSON.stringify(data.control) : undefined,
         operation: data.control ? JSON.stringify(data.control) : undefined,
-      }) : qs.stringify(data),
+      }) : stringify(data),
 
     };
     try {

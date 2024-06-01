@@ -2,6 +2,8 @@ import {Service, PlatformAccessory, CharacteristicValue} from 'homebridge';
 
 import {AirControlBasePlatform} from './platform';
 import {State} from './state';
+import {mapWindFromAPIToHomeKit} from "./device";
+import {maxTemp, minTemp} from "./consts";
 
 export class AirControlBaseAC {
   private service: Service;
@@ -19,6 +21,7 @@ export class AirControlBaseAC {
         private readonly platform: AirControlBasePlatform,
         private readonly accessory: PlatformAccessory,
         private readonly state: State,
+        private readonly refreshHomeKitEachMs: number,
   ) {
 
 
@@ -40,19 +43,22 @@ export class AirControlBaseAC {
 
         this.service.getCharacteristic(this.platform.Characteristic.CoolingThresholdTemperature)
           .setProps({
-            minValue: 16,
-            maxValue: 30,
+            minValue: minTemp,
+            maxValue: maxTemp,
             minStep: 1,
           })
           .onSet(this.setTemp.bind(this));
 
         this.service.getCharacteristic(this.platform.Characteristic.HeatingThresholdTemperature)
           .setProps({
-            minValue: 16,
-            maxValue: 30,
+            minValue: minTemp,
+            maxValue: maxTemp,
             minStep: 1,
           })
           .onSet(this.setTemp.bind(this));
+
+        this.service.getCharacteristic(this.platform.Characteristic.RotationSpeed)
+          .onSet(this.setRotationSpeed.bind(this));
 
         this.service.getCharacteristic(this.platform.Characteristic.TargetHeaterCoolerState)
           .onSet(this.setMode.bind(this));
@@ -63,29 +69,27 @@ export class AirControlBaseAC {
             this.platform.log.info('No data exists for device ' + accessory.context.device.id + ' not going to update it');
             return;
           }
-            // @ts-ignore
-            if (device.power === 'n') {
+          if (device.power === 'n') {
             this.service.updateCharacteristic(this.platform.Characteristic.Active, false);
-          } else { // @ts-ignore
-              if (device.power === 'y' && device.mode === 'heat') {
-                          this.service.updateCharacteristic(this.platform.Characteristic.Active, true);
-                          // @ts-ignore
-                            this.service.updateCharacteristic(this.platform.Characteristic.HeatingThresholdTemperature, device.setTemp);
-                          this.service.updateCharacteristic(this.platform.Characteristic.TargetHeaterCoolerState, this.platform.Characteristic.TargetHeaterCoolerState.HEAT);
-                          this.service.updateCharacteristic(this.platform.Characteristic.CurrentHeaterCoolerState, this.platform.Characteristic.CurrentHeaterCoolerState.HEATING);
-                        } else { // @ts-ignore
-                            if (device.power === 'y' && device.mode === 'cool') {
-                                        this.service.updateCharacteristic(this.platform.Characteristic.Active, true);
-                                        // @ts-ignore
-                                          this.service.updateCharacteristic(this.platform.Characteristic.CoolingThresholdTemperature, device.setTemp);
-                                        this.service.updateCharacteristic(this.platform.Characteristic.TargetHeaterCoolerState, this.platform.Characteristic.TargetHeaterCoolerState.COOL);
-                                        this.service.updateCharacteristic(this.platform.Characteristic.CurrentHeaterCoolerState, this.platform.Characteristic.CurrentHeaterCoolerState.COOLING);
-                                      }
-                        }
+          } else {
+            this.service.updateCharacteristic(this.platform.Characteristic.Active, true);
+            const rotationSpeed = mapWindFromAPIToHomeKit(device.wind);
+              this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, rotationSpeed);
+            if (device.mode === 'heat') {
+              this.service.updateCharacteristic(this.platform.Characteristic.HeatingThresholdTemperature, device.setTemp);
+              this.service.updateCharacteristic(this.platform.Characteristic.TargetHeaterCoolerState, this.platform.Characteristic.TargetHeaterCoolerState.HEAT);
+              this.service.updateCharacteristic(this.platform.Characteristic.CurrentHeaterCoolerState, this.platform.Characteristic.CurrentHeaterCoolerState.HEATING);
+            } else {
+              if ( device.mode === 'cool') {
+                this.service.updateCharacteristic(this.platform.Characteristic.Active, true);
+                this.service.updateCharacteristic(this.platform.Characteristic.CoolingThresholdTemperature, device.setTemp);
+                this.service.updateCharacteristic(this.platform.Characteristic.TargetHeaterCoolerState, this.platform.Characteristic.TargetHeaterCoolerState.COOL);
+                this.service.updateCharacteristic(this.platform.Characteristic.CurrentHeaterCoolerState, this.platform.Characteristic.CurrentHeaterCoolerState.COOLING);
+              }
+            }
           }
-          // @ts-ignore
-            this.service.updateCharacteristic(this.platform.Characteristic.CurrentTemperature, device.factTemp);
-        }, 10000);
+          this.service.updateCharacteristic(this.platform.Characteristic.CurrentTemperature, device.factTemp);
+        }, refreshHomeKitEachMs);
   }
 
   /**
@@ -100,6 +104,11 @@ export class AirControlBaseAC {
   async setTemp(value: CharacteristicValue) {
     await this.state.setTemp(this.accessory.context.device.id, value);
     this.platform.log.debug('Set Characteristic Temp ->', value);
+  }
+
+  async setRotationSpeed(value: CharacteristicValue) {
+    await this.state.setRotationSpeed(this.accessory.context.device.id, value);
+    this.platform.log.debug('Set Characteristic Rotation Speed ->', value);
   }
 
   async setMode(value: CharacteristicValue) {

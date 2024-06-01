@@ -32,8 +32,8 @@ export class AirControlBasePlatform implements DynamicPlatformPlugin {
 
 
     this.log.debug('Finished initializing platform:', this.config.name);
-    this.airControlBaseApi = new AirControlBaseApi(log, this.config.email, this.config.password);
-    this.state = new State(log, this.airControlBaseApi);
+    this.airControlBaseApi = new AirControlBaseApi(log, this.config.email, this.config.password, this.config.avoidRefreshStatusOnUpdateInMs);
+    this.state = new State(log, this.airControlBaseApi, config.refreshDevicesEachMs);
 
     // Homebridge 1.8.0 introduced a `log.success` method that can be used to log success messages
     // For users that are on a version prior to 1.8.0, we need a 'polyfill' for this method
@@ -81,7 +81,6 @@ export class AirControlBasePlatform implements DynamicPlatformPlugin {
       // generate a unique id for the accessory this should be generated from
       // something globally unique, but constant, for example, the device serial
       // number or MAC address
-      // @ts-ignore
       const uuid = this.api.hap.uuid.generate(device.id.toString());
 
       // see if an accessory with the same uuid has already been registered and restored from
@@ -98,7 +97,7 @@ export class AirControlBasePlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the restored accessory
         // this is imported from `platformAccessory.ts`
-        new AirControlBaseAC(this, existingAccessory, this.state);
+        new AirControlBaseAC(this, existingAccessory, this.state, this.config.refreshHomeKitEachMs);
 
         // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, e.g.:
         // remove platform accessories when no longer present
@@ -106,11 +105,9 @@ export class AirControlBasePlatform implements DynamicPlatformPlugin {
         // this.log.info('Removing existing accessory from cache:', existingAccessory.displayName);
       } else {
         // the accessory does not yet exist, so we need to create it
-        // @ts-ignore
         this.log.info('Adding new accessory:', device.name);
 
         // create a new accessory
-        // @ts-ignore
         const accessory = new this.api.platformAccessory(device.name, uuid);
 
         // store a copy of the device object in the `accessory.context`
@@ -119,7 +116,7 @@ export class AirControlBasePlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the newly create accessory
         // this is imported from `platformAccessory.ts`
-        new AirControlBaseAC(this, accessory, this.state);
+        new AirControlBaseAC(this, accessory, this.state, this.config.refreshHomeKitEachMs);
 
         // link the accessory to your platform
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
