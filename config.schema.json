@@ -19,19 +19,19 @@
       },
       "avoidRefreshStatusOnUpdateInMs": {
         "title": "Ignore status refresh in server on case of update in homekit",
-        "type": "int",
+        "type": "integer",
         "required": true,
         "default": 15000
       },
       "refreshDevicesEachMs": {
         "title": "The amount of milliseconds when go to aircontrolbase to refresh the device states from the server",
-        "type": "int",
+        "type": "integer",
         "required": true,
         "default": 60000
       },
       "refreshHomeKitEachMs": {
         "title": "The amount of milliseconds when refresh device states on homekit side",
-        "type": "int",
+        "type": "integer",
         "required": true,
         "default": 10000
       }
