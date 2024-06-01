@@ -2,7 +2,7 @@
   "private": false,
   "displayName": "Air Control Base Midea AC Plugin",
   "name": "homebridge-aircontrolbase",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "This plugin allows you to control your midea air conditioner via homebridge if they are registered in https://aircontrolbase.com",
   "license": "Apache-2.0",
   "repository": {
